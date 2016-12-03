@@ -1,10 +1,13 @@
 #include <iostream>
 #include <unistd.h>
+#include "sensor.h"
+#include "iotDataQueue.h"
 using namespace std;
 class Machine   //class machine whose behaviour depends on state,
 {
     //so make state a nested class in state
     class State *current;//machine has a pointer (*current) which points to state
+    // class State
 public:
     Machine();//functions in machine
     void setCurrent(State *s)// a pointer to state is passed into setCurrent
@@ -84,6 +87,19 @@ public:
 };
 void SENSING::proc(Machine *m)
 {
+    usleep(5000000);
+    iotDataQueue temperature;//create q object
+    sensor tempSens;// sensor object
+    temperature.init();//init temp q
+    for(int num=0; num<10; num++)//loop to get 10 readings from teh two sensors and put into queues.
+    {
+        int latestTemp = tempSens.getrdg();// get reading from temp sensor and assign to latestTemp
+
+        temperature.qput(latestTemp);//put latestTemp into  Q
+cout << "latest temp to be read is: " << latestTemp;
+cout << '\n';
+    }
+
     cout << "   going from SENSING to processing";
     usleep(5000000);
     m->setCurrent(new PROC());
@@ -102,8 +118,11 @@ public:
         cout << "   dtor-IDLE\n";
     };
     void sensing(Machine *m)
-    {
+    {int go;
         usleep(50000000);
+        cout << " press 1 to proceed from idle to sensing:";// User must press a button to move from idle to sensing.
+        while (go !=1)
+              cin >> go;// could use a timer either
         cout << "   going from IDLE to SENSING";
         m->setCurrent(new SENSING());
         delete this;
@@ -111,6 +130,16 @@ public:
 };
 void PROC::idle(Machine *m)
 {
+    usleep(50000000);
+    iotDataQueue temperature;//create q object
+    sensor tempSens;// sensor object
+    temperature.init();//init temp q
+    cout << "Contents of Temperature queue: \n";
+    for(int num=0; num<10; num++)//loop to cout 10 times
+    {
+        cout << temperature.qget() << " degrees C\n";
+    }
+
 
     cout << "   going from PROCessing to IDLE";
     usleep(50000000);
@@ -120,7 +149,7 @@ void PROC::idle(Machine *m)
 
 Machine::Machine()
 {
-    current = new IDLE();
+    current = new IDLE(); // all new machines created in IDLE state
     cout << '\n';
 }
 
@@ -129,14 +158,19 @@ int main()
     void(Machine:: *ptrs[])() =//an array of pointers to functions in class Machine
     {
         Machine::idle, Machine::sensing, Machine::proc//these are the functions in machine that can be pointed at
-    };                   //   [0] means idle,[1] means sesning etc.
+    };
+    int go;                 //   [0] means idle,[1] means sensing etc.
     Machine fsm;//instantiate an object of class machine
-    int num =1;
-    for(num=0; num<20; num++)
+    cout << "FSM created in IDLE state:";
+    usleep(50000000);
+    //cout << " press 1 to proceed to sensing:";
+   //     while (go !=1)
+   //           cin >> go;
+    int num  ;
+        for(num=1; num<20; num++)
     {
-        //cout << "Enter 1 to start the machine: ";//ie. point at function sensing
-        //  cin >> num;
-        (fsm.*ptrs[num%3])();
+
+                (fsm.*ptrs[num%3])();
 
     }
 }
